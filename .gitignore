@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment
+.env
+*.env
+
+# Logs
+logs/
+*.log
+
+# MLflow
+mlruns/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.DS_Store
+
+# Models and Scalers
+models/
+*.h5
+*.pkl
+
+# IDE specific
+.vscode/
+.idea/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Miscellaneous
+*.~
+*.lock
+*.cache
+*.egg-info/
+*.eggs/
+
+# Node.js
+node_modules/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+*.egg-info/
