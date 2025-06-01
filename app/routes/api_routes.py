@@ -3,6 +3,8 @@ from app.services.training_service import async_train_model
 from app.services.amazon.s3_service import S3Manager
 from app.utils.logger import AppLogger
 from app.utils.status_tracker import training_status
+from app.services.predicition_service import ModelPredictor
+from app.ml_models.model_status import handle_model_status
 import os
 import json
 
@@ -10,6 +12,13 @@ import json
 logger = AppLogger(__name__).get_logger()
 
 bp = Blueprint('predict_routes', __name__)
+
+# Initialize ModelPredictor with the directory where models are stored
+model_predictor = ModelPredictor(
+    bucket_name="lstm-models-bucket",
+    region_name="us-east-1",
+    model_dir=os.getenv("MODEL_DIR", "./app/ml_models/temp")
+)
 
 @bp.route('/models/check', methods=['POST'])
 def check_models():
@@ -20,48 +29,7 @@ def check_models():
 
     for raw_symbol in symbols:
         symbol = raw_symbol.upper()
-        model_key = f"models/{symbol}/model.h5"
-        scaler_key = f"models/{symbol}/scaler.pkl"
-
-        # Check if model and scaler exist in S3
-        s3_manager = S3Manager(bucket_name=os.getenv("AWS_S3_BUCKET"), region_name=os.getenv("AWS_REGION"))
-        model_exists = s3_manager.check_model(model_key)
-        scaler_exists = s3_manager.check_model(scaler_key)
-
-        # Dynamically verify the status
-        if model_exists and scaler_exists:
-            results.append({
-                "symbol": symbol,
-                "model_exists": True,
-                "message": "Model and scaler are available."
-            })
-            # Clean up training status if model exists
-            training_status.pop(symbol, None)
-        elif symbol in training_status and training_status[symbol] == "in_progress":
-            results.append({
-                "symbol": symbol,
-                "model_exists": False,
-                "message": "Training already in progress. The model will be available soon."
-            })
-        else:
-            # Check again to ensure model and scaler are missing before starting training
-            if not model_exists and not scaler_exists:
-                results.append({
-                    "symbol": symbol,
-                    "model_exists": False,
-                    "message": "Model for this stock code has not been trained yet. Starting training, try again later."
-                })
-                async_train_model(symbol)
-                training_status[symbol] = "in_progress"
-            else:
-                # If model or scaler exists but training is not complete, start training and overwrite
-                results.append({
-                    "symbol": symbol,
-                    "model_exists": False,
-                    "message": "Model or scaler exists but training is not complete. Starting training and overwriting existing files."
-                })
-                async_train_model(symbol)
-                training_status[symbol] = "in_progress"
+        results.append(handle_model_status(symbol))
 
     return jsonify(results), 200
 
@@ -94,7 +62,16 @@ def get_models_metrics():
 
             results.append({
                 "symbol": symbol,
-                "metrics": metrics
+                "metrics": {
+                    "MAE": metrics.get("MAE"),
+                    "RMSE": metrics.get("RMSE"),
+                    "MAPE": metrics.get("MAPE"),
+                    "R²": metrics.get("R²"),
+                    "last_data_date": metrics.get("last_data_date"),
+                    "training_duration": metrics.get("training_duration"),
+                    "training_data_size": metrics.get("training_data_size"),
+                    "validation_data_size": metrics.get("validation_data_size")
+                }
             })
 
         except Exception as e:
@@ -105,3 +82,33 @@ def get_models_metrics():
             })
 
     return jsonify(results), 200
+
+@bp.route('/models/predict', methods=['POST'])
+def predict():
+    data = request.get_json()
+    symbols = data.get("symbols")
+
+    if not symbols or not isinstance(symbols, list):
+        return jsonify({"error": "Symbols parameter must be a list of stock symbols."}), 400
+
+    results = {}
+
+    for symbol in symbols:
+        status = handle_model_status(symbol)
+        if not status["model_exists"]:
+            results[symbol] = {
+                "error": status["message"],
+                "status": "failed"
+            }
+        else:
+            try:
+                predictions = model_predictor.predict([symbol])
+                results[symbol] = predictions[symbol]
+            except Exception as e:
+                logger.error(f"Error during prediction for symbol {symbol}: {e}")
+                results[symbol] = {
+                    "error": "An error occurred during prediction.",
+                    "status": "failed"
+                }
+
+    return jsonify({"predictions": results}), 200

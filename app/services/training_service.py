@@ -1,6 +1,4 @@
 from app.utils.logger import AppLogger
-import mlflow
-import mlflow.keras
 from app.services.amazon.s3_service import S3Manager
 import pickle
 import random
@@ -17,6 +15,7 @@ import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.callbacks import EarlyStopping
 import pandas as pd
+from app.services.data_service import fetch_stock_data
 
 logger = AppLogger(__name__).get_logger()
 
@@ -32,10 +31,6 @@ seed = int(os.getenv("SEED", 42))
 np.random.seed(seed)
 tf.random.set_seed(seed)
 random.seed(seed)
-
-# Configuração do MLflow
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
-mlflow.set_experiment("Stock Price Prediction")
 
 def async_train_model(symbol):
     current_time = time.time()
@@ -84,8 +79,7 @@ def train_model(symbol):
 
     # Download data
     start_date = '1901-01-01'
-    df = yf.download(symbol, start=start_date)
-    df = df[['Close', 'High', 'Low', 'Open']].dropna()
+    df = fetch_stock_data(symbol, period="max")
     df.index = pd.to_datetime(df.index)
 
     # Get the last date from the Yahoo Finance data
@@ -124,69 +118,79 @@ def train_model(symbol):
     factory = LSTMModelFactory()
     model = factory.create_model(input_shape=(window_size, 4))
 
-    # Train model with MLflow tracking
-    with mlflow.start_run():
-        mlflow.log_param("symbol", symbol)
-        mlflow.log_param("window_size", window_size)
-        mlflow.log_param("epochs", 100)
-        mlflow.log_param("batch_size", 32)
+    # Train model
+    start_time = time.time()
 
-        early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        history = model.fit(
-            X_train, y_train,
-            epochs=100,
-            batch_size=32,
-            validation_data=(X_val, y_val),
-            callbacks=[early_stop],
-            verbose=1  # Ensure verbose output
-        )
+    early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    history = model.fit(
+        X_train, y_train,
+        epochs=100,
+        batch_size=32,
+        validation_data=(X_val, y_val),
+        callbacks=[early_stop],
+        verbose=1  # Ensure verbose output
+    )
 
-        # Log metrics
-        loss = history.history['loss'][-1]
-        val_loss = history.history['val_loss'][-1]
-        mlflow.log_metric("loss", loss)
-        mlflow.log_metric("val_loss", val_loss)
+    # Calculate training duration
+    training_duration = time.time() - start_time
 
-        # Calculate additional metrics
-        y_pred_scaled = model.predict(X_val)
-        y_pred = y_pred_scaled.reshape(-1, 1)
+    # Log metrics
+    loss = history.history['loss'][-1]
+    val_loss = history.history['val_loss'][-1]
 
-        close_min = scaler.data_min_[0]
-        close_max = scaler.data_max_[0]
+    # Calculate additional metrics
+    y_pred_scaled = model.predict(X_val)
+    y_pred = y_pred_scaled.reshape(-1, 1)
 
-        y_pred_real = y_pred * (close_max - close_min) + close_min
-        y_val_real = y_val.reshape(-1, 1) * (close_max - close_min) + close_min
+    close_min = scaler.data_min_[0]
+    close_max = scaler.data_max_[0]
 
-        mae = mean_absolute_error(y_val_real, y_pred_real)
-        rmse = np.sqrt(mean_squared_error(y_val_real, y_pred_real))
-        mape = np.mean(np.abs((y_val_real - y_pred_real) / y_val_real)) * 100
-        r2 = r2_score(y_val_real, y_pred_real)
+    y_pred_real = y_pred * (close_max - close_min) + close_min
+    y_val_real = y_val.reshape(-1, 1) * (close_max - close_min) + close_min
 
-        # Save metrics to a JSON file
-        metrics = {
-            "MAE": mae,
-            "RMSE": rmse,
-            "MAPE": mape,
-            "R²": r2,
-            "last_data_date": last_date
-        }
-        metrics_path = f"{symbol}_metrics.json"
-        with open(metrics_path, "w") as f:
-            json.dump(metrics, f)
+    mae = mean_absolute_error(y_val_real, y_pred_real)
+    rmse = np.sqrt(mean_squared_error(y_val_real, y_pred_real))
+    mape = np.mean(np.abs((y_val_real - y_pred_real) / y_val_real)) * 100
+    r2 = r2_score(y_val_real, y_pred_real)
 
-        # Upload metrics to S3 in the correct folder
-        s3_manager.upload_model(metrics_path, f"models/{symbol}/metrics.json")
-        os.remove(metrics_path)
+    # Ensure training and validation sizes are calculated correctly
+    training_data_size = len(X_train)
+    validation_data_size = len(X_val)
 
-        # Save model to a file
-        model_path = f"{symbol}_model.h5"
-        model.save(model_path)
+    # Save metrics to a JSON file
+    metrics = {
+        "MAE": mae,
+        "RMSE": rmse,
+        "MAPE": mape,
+        "R²": r2,
+        "last_data_date": last_date,
+        "training_duration": training_duration,
+        "training_data_size": training_data_size,
+        "validation_data_size": validation_data_size
+    }
+    metrics_path = f"{symbol}_metrics.json"
+    with open(metrics_path, "w") as f:
+        json.dump(metrics, f)
 
-        # Upload the model to S3 in the correct folder
-        s3_manager.upload_model(model_path, f"models/{symbol}/model.h5")
-        os.remove(model_path)
+    # Upload metrics to S3 in the correct folder
+    s3_manager.upload_model(metrics_path, f"models/{symbol}/metrics.json")
+    os.remove(metrics_path)
+
+    # Save model to a file
+    model_path = f"{symbol}_model.h5"
+    model.save(model_path)
+
+    # Upload the model to S3 in the correct folder
+    s3_manager.upload_model(model_path, f"models/{symbol}/model.h5")
+    os.remove(model_path)
 
     logger.info(f"Training completed for {symbol}")
+
+    # Remove temporary files after uploading to S3
+    if os.path.exists(model_path):
+        os.remove(model_path)
+    if os.path.exists(scaler_path):
+        os.remove(scaler_path)
 
 def clean_training_status():
     logger.info("Cleaning training status for invalid symbols...")

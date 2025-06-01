@@ -1,58 +1,15 @@
-# Python
+# Ignore Python cache files
 __pycache__/
-*.py[cod]
-*.pyo
+*.pyc
 
-# Environment
-.env
-*.env
+# Ignore temporary model files
+app/ml_models/temp/
 
-# Logs
+# Ignore logs
 logs/
-*.log
 
-# MLflow
-mlruns/
+# Ignore Jupyter Notebook checkpoints
+app/training/.ipynb_checkpoints/
 
-# Jupyter Notebooks
-.ipynb_checkpoints/
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.swp
-*.swo
-*.DS_Store
-
-# Models and Scalers
-models/
-*.h5
-*.pkl
-
-# IDE specific
-.vscode/
-.idea/
-
-# OS generated files
-Thumbs.db
-.DS_Store
-
-# Miscellaneous
-*.~
-*.lock
-*.cache
-*.egg-info/
-*.eggs/
-
-# Node.js
-node_modules/
-
-# Coverage
-.coverage
-htmlcov/
-
-# Build
-build/
-dist/
-*.egg-info/
+# Ignore environment files
+.env
