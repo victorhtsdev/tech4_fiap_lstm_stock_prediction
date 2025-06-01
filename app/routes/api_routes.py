@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from app.services.training_service import async_train_model
-from app.services.amazon.s3_service import S3Manager
 from app.utils.logger import AppLogger
 from app.utils.status_tracker import training_status
 from app.services.predicition_service import ModelPredictor
@@ -17,7 +16,7 @@ bp = Blueprint('predict_routes', __name__)
 model_predictor = ModelPredictor(
     bucket_name="lstm-models-bucket",
     region_name="us-east-1",
-    model_dir=os.getenv("MODEL_DIR", "./app/ml_models/temp")
+    model_dir=os.getenv("MODEL_DIR", "./app/ml_models/output")
 )
 
 @bp.route('/models/check', methods=['POST'])
@@ -42,44 +41,32 @@ def get_models_metrics():
 
     for symbol in symbols:
         symbol = symbol.upper()
-        s3_key = f"models/{symbol}/metrics.json"
-
-        try:
-            # Use S3Manager to check and download the metrics file
-            s3_manager = S3Manager(bucket_name=os.getenv("AWS_S3_BUCKET"), region_name=os.getenv("AWS_REGION"))
-            if not s3_manager.check_model(s3_key):
-                results.append({
-                    "symbol": symbol,
-                    "error": "Metrics for this model are not available."
-                })
-                continue
-
-            # Download the metrics file directly into memory
-            metrics_object = s3_manager.s3_client.get_object(Bucket=os.getenv("AWS_S3_BUCKET"), Key=s3_key)
-            metrics = json.loads(metrics_object['Body'].read().decode('utf-8'))
-
-            logger.info(f"Successfully retrieved metrics for {symbol}: {metrics}")
-
+        metrics_path = os.path.join("./app/ml_models/output", f"{symbol}_metrics.json")
+        if not os.path.exists(metrics_path):
             results.append({
                 "symbol": symbol,
-                "metrics": {
-                    "MAE": metrics.get("MAE"),
-                    "RMSE": metrics.get("RMSE"),
-                    "MAPE": metrics.get("MAPE"),
-                    "R²": metrics.get("R²"),
-                    "last_data_date": metrics.get("last_data_date"),
-                    "training_duration": metrics.get("training_duration"),
-                    "training_data_size": metrics.get("training_data_size"),
-                    "validation_data_size": metrics.get("validation_data_size")
-                }
+                "error": "Metrics for this model are not available."
             })
+            continue
 
-        except Exception as e:
-            logger.error(f"Error retrieving metrics for {symbol}: {e}")
-            results.append({
-                "symbol": symbol,
-                "error": "An error occurred while retrieving the metrics."
-            })
+        with open(metrics_path, "r") as f:
+            metrics = json.load(f)
+
+        logger.info(f"Successfully retrieved metrics for {symbol}: {metrics}")
+
+        results.append({
+            "symbol": symbol,
+            "metrics": {
+                "MAE": metrics.get("MAE"),
+                "RMSE": metrics.get("RMSE"),
+                "MAPE": metrics.get("MAPE"),
+                "R²": metrics.get("R²"),
+                "last_data_date": metrics.get("last_data_date"),
+                "training_duration": metrics.get("training_duration"),
+                "training_data_size": metrics.get("training_data_size"),
+                "validation_data_size": metrics.get("validation_data_size")
+            }
+        })
 
     return jsonify(results), 200
 

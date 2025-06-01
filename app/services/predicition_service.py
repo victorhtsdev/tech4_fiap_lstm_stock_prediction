@@ -1,51 +1,31 @@
-from app.utils.s3_utils import model_exists_in_s3
 import yfinance as yf
 import numpy as np
 from tensorflow.keras.models import load_model
 import os
 import pickle
-from app.services.amazon.s3_service import S3Manager
 from io import BytesIO
 import tempfile
 from app.services.data_service import fetch_stock_data, get_cached_stock_data
 import json
 from datetime import datetime
 import threading
+import logging
 
-def model_exists(symbol):
-    return model_exists_in_s3(symbol)
+logger = logging.getLogger(__name__)
 
 class ModelPredictor:
     def __init__(self, bucket_name=None, region_name=None, model_dir=None):
-        if bucket_name and region_name:
-            self.s3_manager = S3Manager(bucket_name=bucket_name, region_name=region_name)
         self.model_dir = model_dir
 
     def load_model_and_scaler(self, symbol):
-        model_key = f"models/{symbol}/model.h5"
-        scaler_key = f"models/{symbol}/scaler.pkl"
+        model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.h5")
+        scaler_path = os.path.join("app", "ml_models", "output", f"{symbol}_scaler.pkl")
 
-        # Define paths within the ml_models temp directory
-        temp_model_path = os.path.join(TEMP_DIR, f"{symbol}_model.h5")
-        temp_scaler_path = os.path.join(TEMP_DIR, f"{symbol}_scaler.pkl")
+        if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+            raise FileNotFoundError(f"Model or scaler for {symbol} not found in {TEMP_DIR}.")
 
-        # Check if model exists locally, if not download from S3
-        if not os.path.exists(temp_model_path):
-            model_object = self.s3_manager.s3_client.get_object(Bucket=self.s3_manager.bucket_name, Key=model_key)
-            with open(temp_model_path, 'wb') as temp_model_file:
-                temp_model_file.write(model_object['Body'].read())
-
-        # Load model
-        model = load_model(temp_model_path)
-
-        # Check if scaler exists locally, if not download from S3
-        if not os.path.exists(temp_scaler_path):
-            scaler_object = self.s3_manager.s3_client.get_object(Bucket=self.s3_manager.bucket_name, Key=scaler_key)
-            with open(temp_scaler_path, 'wb') as temp_scaler_file:
-                temp_scaler_file.write(scaler_object['Body'].read())
-
-        # Load scaler
-        with open(temp_scaler_path, 'rb') as f:
+        model = load_model(model_path)
+        with open(scaler_path, 'rb') as f:
             scaler = pickle.load(f)
 
         return model, scaler
@@ -59,7 +39,7 @@ class ModelPredictor:
             data = fetch_stock_data(symbol, period="1y")
 
             # Save the fetched data to cache for future use
-            temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "temp")
+            temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "output")
             cache_file = os.path.join(temp_dir, f"{symbol}_data.json")
             data.reset_index(inplace=True)  # Ensure the index is included as a column
             data.to_json(cache_file, orient="records", date_format="iso")
@@ -68,7 +48,7 @@ class ModelPredictor:
         return data[-60:]
 
     def get_prediction_cache(self, symbol):
-        temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "temp")
+        temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "output")
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
 
@@ -86,11 +66,15 @@ class ModelPredictor:
 
     def save_prediction_cache(self, symbol, prediction):
         def save_to_file():
-            temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "temp")
+            temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "output")
             cache_file = os.path.join(temp_dir, f"{symbol}_prediction.json")
 
-            with open(cache_file, "w") as f:
-                json.dump(prediction, f)
+            try:
+                with open(cache_file, "w") as f:
+                    json.dump(prediction, f)
+                logger.info(f"Prediction for {symbol} saved successfully to {cache_file}.")
+            except Exception as e:
+                logger.error(f"Failed to save prediction for {symbol}: {e}")
 
         # Run the save operation in a separate thread
         save_thread = threading.Thread(target=save_to_file)
@@ -149,6 +133,6 @@ class ModelPredictor:
         return predictions
 
 # Define a temporary directory within the ml_models directory
-TEMP_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "temp")
+TEMP_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models", "output")
 if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)

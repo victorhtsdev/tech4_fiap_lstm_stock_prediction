@@ -1,16 +1,32 @@
 from app.services.training_service import async_train_model
-from app.services.amazon.s3_service import S3Manager
 from app.utils.status_tracker import training_status
 import os
+import logging
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def handle_model_status(symbol):
-    model_key = f"models/{symbol}/model.h5"
-    scaler_key = f"models/{symbol}/scaler.pkl"
+    model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.h5")
+    scaler_path = os.path.join("app", "ml_models", "output", f"{symbol}_scaler.pkl")
 
-    # Check if model and scaler exist in S3
-    s3_manager = S3Manager(bucket_name=os.getenv("AWS_S3_BUCKET"), region_name=os.getenv("AWS_REGION"))
-    model_exists = s3_manager.check_model(model_key)
-    scaler_exists = s3_manager.check_model(scaler_key)
+    # Log the current working directory
+    logger.info(f"Current working directory: {os.getcwd()}")
+
+    # Resolve absolute paths for debugging
+    model_path = os.path.abspath(model_path)
+    scaler_path = os.path.abspath(scaler_path)
+
+    # Log the resolved paths and existence checks
+    logger.info(f"Resolved model path: {model_path}")
+    logger.info(f"Resolved scaler path: {scaler_path}")
+    logger.info(f"Model exists: {os.path.exists(model_path)}")
+    logger.info(f"Scaler exists: {os.path.exists(scaler_path)}")
+
+    # Check if model and scaler exist locally
+    model_exists = os.path.exists(model_path)
+    scaler_exists = os.path.exists(scaler_path)
 
     # Dynamically verify the status
     if model_exists and scaler_exists:

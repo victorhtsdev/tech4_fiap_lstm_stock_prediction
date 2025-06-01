@@ -1,14 +1,9 @@
-import boto3
-from botocore.exceptions import ClientError
+import os
 
-s3 = boto3.client('s3')
+def model_exists_locally(symbol):
+    """Check if the model and scaler exist locally in the output directory."""
+    output_dir = os.path.join("ml_models", "output")
+    model_path = os.path.join(output_dir, f"{symbol}_model.h5")
+    scaler_path = os.path.join(output_dir, f"{symbol}_scaler.pkl")
 
-def model_exists_in_s3(symbol):
-    key = f"{symbol}/model.h5"
-    try:
-        s3.head_object(Bucket=AWS_S3_BUCKET, Key=key)
-        return True
-    except ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return False
-        raise
+    return os.path.exists(model_path) and os.path.exists(scaler_path)

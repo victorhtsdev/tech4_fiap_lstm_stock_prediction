@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 
 # Ignore temporary model files
-app/ml_models/temp/
+app/ml_models/output/
 
 # Ignore logs
 logs/
