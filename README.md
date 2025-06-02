@@ -1,7 +1,13 @@
 # LSTM Stock Prediction API
 
 ## Descrição
-Esta aplicação fornece uma API para predição de preços de ações utilizando modelos de aprendizado de máquina baseados em LSTM (Long Short-Term Memory). Além disso, a aplicação possui um processo agendado que realiza tarefas diárias, como predições automáticas e verificação do status dos modelos.
+Esta aplicação fornece uma API para predição de preços de ações utilizando modelos de aprendizado de máquina baseados em LSTM (Long Short-Term Memory). Além disso, a aplicação possui um processo agendado que realiza tarefas diárias, como predições automáticas e verificação do status dos modelos. Este projeto foi desenvolvido para o curso de Machine Learning Engineering como parte do Tech Challenge 4 da FIAP.
+
+## Variáveis de Ambiente
+As seguintes variáveis de ambiente são utilizadas no projeto:
+- `SEED`: Define a seed para reprodutibilidade dos resultados (padrão: 42).
+- `ENABLE_LOGS`: Ativa ou desativa os logs da aplicação (padrão: True).
+- `DAILY_TASK_HOUR`: Define o horário em que o processo agendado será executado diariamente (padrão: 3).
 
 ## Funcionalidades
 
@@ -133,14 +139,8 @@ O agendamento é configurado para rodar em um horário específico, definido pel
 ## Logs
 Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.log`. Eles incluem informações sobre predições, treinamentos e erros.
 
-## Contribuição
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
-
 ## Licença
 Este projeto está licenciado sob a licença MIT.
 
-## Contexto
-Este projeto foi desenvolvido como parte do Tech Challenge 4 do curso de Machine Learning Engineering da FIAP.
-
 ## Autor
-Este projeto foi desenvolvido por [Victor H T Santana](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/).
+Este projeto foi desenvolvido por [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/) Victor H T Santana.
