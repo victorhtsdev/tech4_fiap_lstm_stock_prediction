@@ -143,4 +143,4 @@ Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.lo
 Este projeto está licenciado sob a licença MIT.
 
 ## Autor
-Este projeto foi desenvolvido por [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/) Victor H T Santana.
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/) Victor H T Santana.
