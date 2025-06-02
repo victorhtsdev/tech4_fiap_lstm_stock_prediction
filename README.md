@@ -145,8 +145,19 @@ O projeto inclui notebooks para auxiliar no treinamento e análise dos modelos. 
 ## Logs
 Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.log`. Eles incluem informações sobre predições, treinamentos e erros.
 
+## Melhorias Futuras
+
+### 1. Avaliação e Re-treino Baseado na Perda de Desempenho
+- Implementar nas tarefas diárias uma avaliação contínua do desempenho dos modelos utilizando dados reais.
+- Caso seja detectada uma perda significativa de desempenho, iniciar automaticamente o re-treino do modelo correspondente.
+
+### 2. Criação de Fila para Treinamento de Modelos
+- Desenvolver um sistema de fila para gerenciar os treinamentos de modelos de forma assíncrona.
+- Garantir que o processamento assíncrono não sobrecarregue os recursos computacionais disponíveis, priorizando tarefas críticas.
+
 ## Licença
 Este projeto está licenciado sob a licença MIT.
 
 ## Autor
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/) Victor H T Santana.
+
