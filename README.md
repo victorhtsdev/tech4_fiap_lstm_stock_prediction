@@ -127,6 +127,11 @@ O agendamento é configurado para rodar em um horário específico, definido pel
    http://localhost:5000/swagger
    ```
 
+## Notebooks
+O projeto inclui notebooks para auxiliar no treinamento e análise dos modelos. Eles estão localizados na pasta `notebooks/`.
+
+- `notebook_modelo.ipynb`: Notebook principal utilizado para o treinamento dos modelos LSTM.
+
 ## Estrutura do Projeto
 - `app/`: Contém os módulos principais da aplicação.
   - `routes/`: Define os endpoints da API.
@@ -135,6 +140,7 @@ O agendamento é configurado para rodar em um horário específico, definido pel
   - `utils/`: Utilitários como logger e rastreador de status.
 - `logs/`: Armazena os logs da aplicação.
 - `scripts/`: Scripts auxiliares para treinamento e manutenção.
+- `notebooks/`: Contém notebooks para auxiliar no treinamento e análise dos modelos.
 
 ## Logs
 Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.log`. Eles incluem informações sobre predições, treinamentos e erros.
