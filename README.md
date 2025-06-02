@@ -1,0 +1,146 @@
+# LSTM Stock Prediction API
+
+## Descrição
+Esta aplicação fornece uma API para predição de preços de ações utilizando modelos de aprendizado de máquina baseados em LSTM (Long Short-Term Memory). Além disso, a aplicação possui um processo agendado que realiza tarefas diárias, como predições automáticas e verificação do status dos modelos.
+
+## Funcionalidades
+
+### Endpoints da API
+
+#### 1. `/models/check` (POST)
+- **Descrição**: Verifica o status dos modelos para os símbolos de ações fornecidos. Caso um modelo não exista, o treinamento será iniciado automaticamente.
+- **Parâmetros**:
+  ```json
+  {
+    "symbols": ["BBAS3.SA", "PETR4.SA"]
+  }
+  ```
+- **Resposta**:
+  ```json
+  [
+    {
+      "symbol": "BBAS3.SA",
+      "model_exists": true,
+      "message": "Model and scaler are available."
+    }
+  ]
+  ```
+
+#### 2. `/models/metrics` (POST)
+- **Descrição**: Retorna métricas de performance para os modelos dos símbolos fornecidos.
+- **Parâmetros**:
+  ```json
+  {
+    "symbols": ["BBAS3.SA", "PETR4.SA"]
+  }
+  ```
+- **Resposta**:
+  ```json
+  [
+    {
+      "symbol": "BBAS3.SA",
+      "metrics": {
+        "MAE": 0.123,
+        "RMSE": 0.456,
+        "MAPE": 1.23,
+        "R²": 0.89,
+        "last_data_date": "2025-06-01",
+        "training_duration": 120,
+        "training_data_size": 1000,
+        "validation_data_size": 200
+      }
+    }
+  ]
+  ```
+
+#### 3. `/models/predict` (POST)
+- **Descrição**: Realiza predições de preços para os símbolos fornecidos. Caso um modelo não exista, o treinamento será iniciado automaticamente.
+- **Parâmetros**:
+  ```json
+  {
+    "symbols": ["BBAS3.SA", "PETR4.SA"]
+  }
+  ```
+- **Resposta**:
+  ```json
+  {
+    "predictions": {
+      "BBAS3.SA": {
+        "predicted_price": 16.04,
+        "status": "success",
+        "variation": {
+          "status": "negative",
+          "percentage": -0.98
+        }
+      }
+    }
+  }
+  ```
+
+#### 4. `/models/retrain` (POST)
+- **Descrição**: Força o re-treino de um modelo para o símbolo fornecido.
+- **Parâmetros**:
+  ```json
+  {
+    "symbol": "BBAS3.SA"
+  }
+  ```
+- **Resposta**:
+  ```json
+  {
+    "message": "Re-training initiated for model: BBAS3.SA"
+  }
+  ```
+
+### Processo Agendado
+A aplicação possui um processo agendado que executa as seguintes tarefas diariamente:
+1. **Predições Automáticas**: Realiza predições para todos os símbolos disponíveis.
+2. **Verificação de Modelos**: Verifica se os modelos estão atualizados. Caso um modelo esteja desatualizado (mais de 15 dias), o re-treino é iniciado automaticamente.
+
+O agendamento é configurado para rodar em um horário específico, definido pela variável de ambiente `DAILY_TASK_HOUR`. Além disso, o processo agendado também é executado automaticamente quando o servidor é iniciado.
+
+## Como Executar
+
+### Pré-requisitos
+- Python 3.11 ou superior
+- Dependências listadas no arquivo `requirements.txt`
+
+### Passos
+1. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Inicie o servidor Flask:
+   ```bash
+   python run.py
+   ```
+
+3. Acesse a documentação Swagger para explorar os endpoints:
+   ```
+   http://localhost:5000/swagger
+   ```
+
+## Estrutura do Projeto
+- `app/`: Contém os módulos principais da aplicação.
+  - `routes/`: Define os endpoints da API.
+  - `services/`: Contém os serviços para predição, treinamento e tarefas diárias.
+  - `ml_models/`: Gerencia os modelos de aprendizado de máquina e seus artefatos.
+  - `utils/`: Utilitários como logger e rastreador de status.
+- `logs/`: Armazena os logs da aplicação.
+- `scripts/`: Scripts auxiliares para treinamento e manutenção.
+
+## Logs
+Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.log`. Eles incluem informações sobre predições, treinamentos e erros.
+
+## Contribuição
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
+
+## Licença
+Este projeto está licenciado sob a licença MIT.
+
+## Contexto
+Este projeto foi desenvolvido como parte do Tech Challenge 4 do curso de Machine Learning Engineering da FIAP.
+
+## Autor
+Este projeto foi desenvolvido por [Victor H T Santana](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/).

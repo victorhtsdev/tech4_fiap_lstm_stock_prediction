@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def handle_model_status(symbol):
-    model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.h5")
+    model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.keras")
     scaler_path = os.path.join("app", "ml_models", "output", f"{symbol}_scaler.pkl")
 
     # Log the current working directory

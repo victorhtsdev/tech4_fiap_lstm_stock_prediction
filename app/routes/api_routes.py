@@ -6,6 +6,7 @@ from app.services.predicition_service import ModelPredictor
 from app.ml_models.model_status import handle_model_status
 import os
 import json
+from flask_swagger_ui import get_swaggerui_blueprint
 
 # Initialize logger
 logger = AppLogger(__name__).get_logger()
@@ -18,6 +19,168 @@ model_predictor = ModelPredictor(
     region_name="us-east-1",
     model_dir=os.getenv("MODEL_DIR", "./app/ml_models/output")
 )
+
+SWAGGER_URL = '/swagger'
+API_URL = '/swagger.json'
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "LSTM Stock Prediction API"
+    }
+)
+
+bp.add_url_rule(SWAGGER_URL, 'swagger_ui', view_func=swaggerui_blueprint)
+
+@bp.route('/swagger.json', methods=['GET'])
+def swagger_spec():
+    """Serve the Swagger specification."""
+    swagger_spec = {
+        "swagger": "2.0",
+        "info": {
+            "version": "1.0.0",
+            "title": "LSTM Stock Prediction API",
+            "description": "API for stock price prediction and model management."
+        },
+        "host": "localhost:5000",
+        "basePath": "/",
+        "schemes": ["http"],
+        "paths": {
+            "/models/check": {
+                "post": {
+                    "summary": "Check model status",
+                    "description": "Check the status of models for the given stock symbols. If a model does not exist for a symbol, training will be initiated automatically.",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "body",
+                            "required": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "symbols": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
+                                },
+                                "required": ["symbols"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successful response",
+                            "schema": {
+                                "type": "array",
+                                "items": {"type": "object"}
+                            }
+                        }
+                    }
+                }
+            },
+            "/models/metrics": {
+                "post": {
+                    "summary": "Get model metrics",
+                    "description": "Retrieve metrics for the given stock symbols.",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "body",
+                            "required": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "symbols": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
+                                },
+                                "required": ["symbols"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successful response",
+                            "schema": {
+                                "type": "array",
+                                "items": {"type": "object"}
+                            }
+                        }
+                    }
+                }
+            },
+            "/models/predict": {
+                "post": {
+                    "summary": "Predict stock prices",
+                    "description": "Predict stock prices for the given symbols. If a model does not exist for a symbol, training will be initiated automatically.",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "body",
+                            "required": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "symbols": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
+                                },
+                                "required": ["symbols"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successful response",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "predictions": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/models/retrain": {
+                "post": {
+                    "summary": "Retrain a model",
+                    "description": "Force retraining of a model for the given symbol.",
+                    "parameters": [
+                        {
+                            "in": "body",
+                            "name": "body",
+                            "required": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "symbol": {"type": "string"}
+                                },
+                                "required": ["symbol"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successful response",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {"type": "string"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return jsonify(swagger_spec)
 
 @bp.route('/models/check', methods=['POST'])
 def check_models():
@@ -99,3 +262,20 @@ def predict():
                 }
 
     return jsonify({"predictions": results}), 200
+
+@bp.route('/models/retrain', methods=['POST'])
+def retrain_model():
+    data = request.get_json()
+    symbol = data.get("symbol")
+
+    if not symbol:
+        return jsonify({"error": "Symbol parameter is required."}), 400
+
+    try:
+        # Chama o serviço de treinamento para re-treinar o modelo
+        async_train_model(symbol.upper())
+        logger.info(f"Re-training initiated for model: {symbol.upper()}")
+        return jsonify({"message": f"Re-training initiated for model: {symbol.upper()}"}), 200
+    except Exception as e:
+        logger.error(f"Error initiating re-training for model {symbol.upper()}: {e}")
+        return jsonify({"error": "An error occurred while initiating re-training."}), 500

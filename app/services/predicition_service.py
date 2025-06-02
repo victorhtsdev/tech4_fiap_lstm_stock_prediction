@@ -18,7 +18,7 @@ class ModelPredictor:
         self.model_dir = model_dir
 
     def load_model_and_scaler(self, symbol):
-        model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.h5")
+        model_path = os.path.join("app", "ml_models", "output", f"{symbol}_model.keras")
         scaler_path = os.path.join("app", "ml_models", "output", f"{symbol}_scaler.pkl")
 
         if not os.path.exists(model_path) or not os.path.exists(scaler_path):

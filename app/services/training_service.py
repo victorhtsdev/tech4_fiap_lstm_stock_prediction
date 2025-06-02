@@ -29,7 +29,7 @@ def async_train_model(symbol):
     # Check if training is already in progress and if it has timed out
     if symbol in training_status:
         status, timestamp = training_status[symbol]
-        model_path = os.path.join(OUTPUT_DIR, f"{symbol}_model.h5")
+        model_path = os.path.join(OUTPUT_DIR, f"{symbol}_model.keras")
         scaler_path = os.path.join(OUTPUT_DIR, f"{symbol}_scaler.pkl")
 
         # Revalidate existence of model and scaler
@@ -59,8 +59,7 @@ def async_train_model(symbol):
 
 def train_model(symbol):
     # Download data
-    start_date = '1901-01-01'
-    df = fetch_stock_data(symbol, period="1y")
+    df = fetch_stock_data(symbol, period="max")
     df.index = pd.to_datetime(df.index)
 
     # Get the last date from the Yahoo Finance data
@@ -139,7 +138,7 @@ def train_model(symbol):
         json.dump(metrics, f)
 
     # Save model to a file
-    model_path = os.path.join(OUTPUT_DIR, f"{symbol}_model.h5")
+    model_path = os.path.join(OUTPUT_DIR, f"{symbol}_model.keras")
     model.save(model_path)
 
 def clean_training_status():

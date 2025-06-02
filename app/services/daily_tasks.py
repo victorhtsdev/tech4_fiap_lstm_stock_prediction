@@ -15,8 +15,8 @@ def list_symbols(output_folder):
     """List all action codes based on model files in the output folder."""
     symbols = []
     for file in os.listdir(output_folder):
-        if file.endswith("_model.h5"):
-            symbol = file.split("_model.h5")[0]
+        if file.endswith("_model.keras"):
+            symbol = file.split("_model.keras")[0]
             symbols.append(symbol)
     return symbols
 
@@ -39,7 +39,7 @@ def run_daily_tasks():
             predictor.predict([symbol])
 
             # Check and train model if necessary
-            model_path = os.path.join(output_folder, f"{symbol}_model.h5")
+            model_path = os.path.join(output_folder, f"{symbol}_model.keras")
             check_and_train_model(symbol, model_path)
         except Exception as e:
             logger.error(f"Error processing {symbol}: {e}")
