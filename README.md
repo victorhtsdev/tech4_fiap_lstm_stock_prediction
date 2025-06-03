@@ -155,9 +155,6 @@ Os logs da aplicação são armazenados no diretório `logs/` no arquivo `app.lo
 - Desenvolver um sistema de fila para gerenciar os treinamentos de modelos de forma assíncrona.
 - Garantir que o processamento assíncrono não sobrecarregue os recursos computacionais disponíveis, priorizando tarefas críticas.
 
-## Licença
-Este projeto está licenciado sob a licença MIT.
-
 ## Autor
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/) Victor H T Santana.
 
